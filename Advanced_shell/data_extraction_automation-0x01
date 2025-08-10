@@ -40,6 +40,11 @@ WEIGHT_KG=$(echo "scale=1; $WEIGHT / 10" | bc -l 2>/dev/null || echo "$(($WEIGHT
 TYPE_CAPITALIZED=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
 NAME_CAPITALIZED=$(echo "$NAME" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
 
-# Format the output using awk
-echo "$NAME_CAPITALIZED is of type $TYPE_CAPITALIZED, weighs ${WEIGHT_KG}kg, and is ${HEIGHT_M}m tall." | \
+# Format weight and height to match exact requirements
+# Remove decimal if it's .0, add leading zero if height starts with .
+FORMATTED_WEIGHT=$(echo "$WEIGHT_KG" | sed 's/\.0$//')
+FORMATTED_HEIGHT=$(echo "$HEIGHT_M" | sed 's/^\./0./')
+
+# Format the output using awk to match exact requirement
+echo "$NAME_CAPITALIZED is of type $TYPE_CAPITALIZED, weighs ${FORMATTED_WEIGHT}kg, and is ${FORMATTED_HEIGHT}m tall." | \
 awk '{print $0}'
