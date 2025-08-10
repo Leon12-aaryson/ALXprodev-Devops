@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Extract Pokémon Data - Task 1
+# Uses jq, awk, and sed to extract and format Pokémon information
+
+# Check if data.json exists
+if [ ! -f "data.json" ]; then
+    echo "❌ Error: data.json not found. Please run the API automation script first."
+    exit 1
+fi
+
+# Check if jq is available
+if ! command -v jq &> /dev/null; then
+    echo "❌ Error: jq command not found. Please install jq."
+    exit 1
+fi
+
+# Extract Pokémon data using jq and format with awk/sed
+echo "🔍 Extracting Pikachu data..."
+
+# Extract name, height, weight, and type using jq
+NAME=$(jq -r '.name' data.json 2>/dev/null)
+HEIGHT=$(jq -r '.height' data.json 2>/dev/null)
+WEIGHT=$(jq -r '.weight' data.json 2>/dev/null)
+TYPE=$(jq -r '.types[0].type.name' data.json 2>/dev/null)
+
+# Check if extraction was successful
+if [ "$NAME" = "null" ] || [ "$HEIGHT" = "null" ] || [ "$WEIGHT" = "null" ] || [ "$TYPE" = "null" ]; then
+    echo "❌ Error: Failed to extract data from data.json"
+    exit 1
+fi
+
+# Convert height from decimeters to meters (divide by 10)
+HEIGHT_M=$(echo "scale=1; $HEIGHT / 10" | bc -l 2>/dev/null || echo "$(($HEIGHT / 10)).$((($HEIGHT % 10)))")
+
+# Convert weight from hectograms to kilograms (divide by 10)
+WEIGHT_KG=$(echo "scale=1; $WEIGHT / 10" | bc -l 2>/dev/null || echo "$(($WEIGHT / 10)).$((($WEIGHT % 10)))")
+
+# Capitalize the first letter using awk
+TYPE_CAPITALIZED=$(echo "$TYPE" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
+NAME_CAPITALIZED=$(echo "$NAME" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
+
+# Format the output using awk
+echo "$NAME_CAPITALIZED is of type $TYPE_CAPITALIZED, weighs ${WEIGHT_KG}kg, and is ${HEIGHT_M}m tall." | \
+awk '{print $0}'

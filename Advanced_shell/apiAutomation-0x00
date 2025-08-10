@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# API Request Automation - Task 0
+# Makes a request to the Pokémon API for Pikachu data
+
+# Set the API endpoint for Pikachu
+API_URL="https://pokeapi.co/api/v2/pokemon/pikachu"
+
+# Function to log errors
+log_error() {
+    echo "$(date): $1" >> errors.txt
+}
+
+# Function to make API request
+fetch_pokemon_data() {
+    # Make the API request and save response to data.json
+    if curl -s -f "$API_URL" > data.json 2>/dev/null; then
+        echo "✅ Successfully fetched Pikachu data and saved to data.json"
+        return 0
+    else
+        log_error "Failed to fetch data from $API_URL"
+        echo "❌ Failed to fetch data. Check errors.txt for details."
+        return 1
+    fi
+}
+
+# Main execution
+echo "🔍 Fetching Pikachu data from Pokémon API..."
+
+# Check if curl is available
+if ! command -v curl &> /dev/null; then
+    log_error "curl command not found"
+    echo "❌ Error: curl command not found. Please install curl."
+    exit 1
+fi
+
+# Fetch the data
+if fetch_pokemon_data; then
+    echo "📁 Data saved to data.json"
+    echo "📊 You can view the data with: jq . < data.json"
+else
+    echo "❌ Failed to fetch data. Check errors.txt for error details."
+    exit 1
+fi

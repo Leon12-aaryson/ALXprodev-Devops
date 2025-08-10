@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# Parallel Data Fetching - Task 5
+# Fetches data for multiple Pokémon in parallel using background processes
+
+# List of Pokémon to fetch
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Create pokemon_data directory if it doesn't exist
+mkdir -p pokemon_data
+
+# Function to log errors
+log_error() {
+    echo "$(date): $1" >> errors.txt
+}
+
+# Function to fetch a single Pokémon (will run in background)
+fetch_pokemon_parallel() {
+    local pokemon_name="$1"
+    local api_url="https://pokeapi.co/api/v2/pokemon/$pokemon_name"
+    local output_file="pokemon_data/${pokemon_name}.json"
+    local pid=$$
+    
+    # Make the API request
+    if curl -s -f "$api_url" > "$output_file" 2>/dev/null; then
+        echo "[$pid] ✅ $pokemon_name: Data saved to $output_file"
+        return 0
+    else
+        log_error "Failed to fetch data for $pokemon_name from $api_url (PID: $pid)"
+        echo "[$pid] ❌ $pokemon_name: Failed to fetch data"
+        return 1
+    fi
+}
+
+# Function to monitor background processes
+monitor_processes() {
+    local pids=("$@")
+    local completed=0
+    local total=${#pids[@]}
+    
+    echo "🔄 Monitoring $total background processes..."
+    
+    # Wait for all processes to complete
+    for pid in "${pids[@]}"; do
+        if wait $pid 2>/dev/null; then
+            completed=$((completed + 1))
+        fi
+    done
+    
+    echo "✅ Completed: $completed/$total processes"
+}
+
+# Main execution
+echo "🚀 Starting parallel Pokémon data retrieval..."
+
+# Check if curl is available
+if ! command -v curl &> /dev/null; then
+    log_error "curl command not found"
+    echo "❌ Error: curl command not found. Please install curl."
+    exit 1
+fi
+
+# Check network connectivity
+if ! curl -s --connect-timeout 5 "https://pokeapi.co" > /dev/null 2>&1; then
+    log_error "Network connectivity issue - cannot reach pokeapi.co"
+    echo "❌ Error: Network connectivity issue. Please check your internet connection."
+    exit 1
+fi
+
+# Array to store process IDs
+declare -a pids
+
+# Start all Pokémon fetches in parallel
+echo "🔄 Starting parallel requests for ${#POKEMON_LIST[@]} Pokémon..."
+
+for pokemon in "${POKEMON_LIST[@]}"; do
+    # Start fetch_pokemon_parallel in background and capture PID
+    fetch_pokemon_parallel "$pokemon" &
+    pids+=($!)
+    
+    # Small delay to avoid overwhelming the API
+    sleep 0.2
+done
+
+echo "🔄 All requests started. Process IDs: ${pids[*]}"
+
+# Monitor all background processes
+monitor_processes "${pids[@]}"
+
+# Wait a moment for any final output
+sleep 1
+
+echo ""
+echo "🎉 Parallel retrieval completed!"
+echo "📁 All data files are saved in the pokemon_data/ directory"
+
+# Display summary of created files
+echo ""
+echo "📊 Summary of created files:"
+if [ -d "pokemon_data" ]; then
+    for file in pokemon_data/*.json; do
+        if [ -f "$file" ]; then
+            size=$(du -h "$file" | cut -f1)
+            echo "  📄 $(basename "$file") ($size)"
+        fi
+    done
+fi
