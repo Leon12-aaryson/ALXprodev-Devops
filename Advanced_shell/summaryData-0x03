@@ -15,6 +15,12 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
+# Check if sed is available
+if ! command -v sed &> /dev/null; then
+    echo "❌ Error: sed command not found. Please install sed."
+    exit 1
+fi
+
 # Initialize variables for calculations
 total_height=0
 total_weight=0
@@ -43,6 +49,10 @@ for json_file in pokemon_data/*.json; do
             # Convert weight from hectograms to kilograms
             weight_kg=$(echo "scale=2; $weight / 10" | bc -l 2>/dev/null || echo "$(($weight / 10)).$((($weight % 10)))")
             
+            # Clean and format data using sed
+            height_m=$(echo "$height_m" | sed 's/^0*//' | sed 's/^\./0./')
+            weight_kg=$(echo "$weight_kg" | sed 's/\.0*$//')
+            
             # Capitalize first letter of name using awk
             name_capitalized=$(echo "$pokemon_name" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
             
@@ -62,15 +72,21 @@ if [ $count -gt 0 ]; then
     avg_height=$(echo "scale=2; $total_height / $count" | bc -l 2>/dev/null || echo "0")
     avg_weight=$(echo "scale=2; $total_weight / $count" | bc -l 2>/dev/null || echo "0")
     
+    # Format averages using sed for cleaner output
+    avg_height=$(echo "$avg_height" | sed 's/^0*//' | sed 's/^\./0./')
+    avg_weight=$(echo "$avg_weight" | sed 's/\.0*$//')
+    
     echo "CSV Report generated at: pokemon_report.csv"
     echo ""
     
-    # Display the CSV content
-    cat pokemon_report.csv
+    # Display the CSV content with sed formatting for better readability
+    cat pokemon_report.csv | sed 's/,/, /g'
     
     echo ""
+    echo "📊 Statistics Summary:"
     echo "Average Height: $avg_height m"
     echo "Average Weight: $avg_weight kg"
+    echo "Total Pokémon processed: $count"
 else
     echo "❌ No valid data found to process"
     exit 1
